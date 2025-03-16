@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-VOSK_MODEL_PATH = "/home/hariii/Documents/Model/Vosk/vosk_model"
+VOSK_MODEL_PATH = "./vosk_model"
 MAX_HISTORY = 3  
 
 client = openai.OpenAI(
