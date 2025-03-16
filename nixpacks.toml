@@ -1,2 +1,5 @@
 [phases.setup]
-nixPkgs = ["ffmpeg"]
+nixPkgs = ["python311", "ffmpeg"]  # This installs Python 3.11 and FFmpeg
+
+[phases.build]
+cmds = ["python -m venv /opt/venv && . /opt/venv/bin/activate && pip install -r requirements.txt"]
