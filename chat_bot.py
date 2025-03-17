@@ -94,7 +94,7 @@ async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None
         reply_from_bot = "The AI is taking too long to respond. Please try again later."
         logger.error("Timeout error: OpenRouter API took too long to respond", exc_info=True)
     except Exception as e:
-        reply_from_bot = f"I encountered an error: {str(e)}"
+        reply_from_bot = "We're experiencing temporary server issues. Please try again in a little while."
         logger.error("Error encountered while chatting with AI: %s", e, exc_info=True)
 
     await send_long_message(update, reply_from_bot)
