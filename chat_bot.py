@@ -58,7 +58,6 @@ async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None
 
     try:
         prompt = user_text or update.message.text.lower()
-
         user_history.append({"role": "user", "content": prompt})
         trim_user_history(user_id)
 
@@ -76,6 +75,10 @@ async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None
             timeout=90
         )
 
+        if not response or not hasattr(response, "choices") or not response.choices:
+            typing_task.cancel()
+            raise ValueError("Invalid response from OpenRouter API (empty choices)")
+
         logger.info("Chat response: %s", response.choices[0].message)
 
         reply_from_bot = response.choices[0].message.content
@@ -89,7 +92,7 @@ async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None
         reply_from_bot = "The AI is taking too long to respond. Please try again later."
         logger.error("Timeout error: OpenRouter API took too long to respond", exc_info=True)
     except Exception as e:
-        reply_from_bot = "I encountered an error, please try again later."
+        reply_from_bot = f"I encountered an error: {str(e)}"
         logger.error("Error encountered while chatting with AI: %s", e, exc_info=True)
 
     await send_long_message(update, reply_from_bot)
