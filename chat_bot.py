@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 VOSK_MODEL_PATH = "./vosk_model"
-MAX_HISTORY = 3  
+MAX_HISTORY = 25
 
 client = openai.OpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -26,42 +26,53 @@ client = openai.OpenAI(
 # # Store conversation history
 # conversation_history = [{"role": "system", "content": "You are a useful assistant."}]
 
-def trim_conversation_history(history):
-    """Keeps only the last MAX_HISTORY messages + system message."""
-    return [history[0]] + history[-MAX_HISTORY:]
+# Store conversation history separately for each user
+user_conversations = {}  # Key: user_id, Value: List of messages
+
+def get_user_history(user_id):
+    """Retrieve conversation history for a user, or initialize it."""
+    if user_id not in user_conversations:
+        user_conversations[user_id] = [{"role": "system", "content": "You are a helpful AI assistant. Answer only the latest question and do not include previous questions and answers in your response. Refer to a past question only if the user explicitly asks about it."}]
+    return user_conversations[user_id]
+
+def trim_user_history(user_id):
+    """Keep only the last MAX_HISTORY messages for a user."""
+    user_conversations[user_id] = [user_conversations[user_id][0]] + user_conversations[user_id][-MAX_HISTORY:]
+
+# def trim_conversation_history(history):
+#     """Keeps only the last MAX_HISTORY messages + system message."""
+#     return [history[0]] + history[-MAX_HISTORY:]
 
 async def send_long_message(update, text):
-    max_length = 4000  # Telegram max limit
+    max_length = 4000
     messages = [text[i:i+max_length] for i in range(0, len(text), max_length)]
     for message in messages:
-        await update.message.reply_text(message)  # Send each part separately
+        await update.message.reply_text(message)
 
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text("Hello! I am your AI chatbot. How can I help you today?")
 
 async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None) -> None:
-    global conversation_history  # Ensure we modify the global history list
+    user_id = update.message.from_user.id
+    user_history = get_user_history(user_id)
+
     try:
-        prompt = user_text or update.message.text
-        conversation_history = [
-            {"role": "system", "content": "You are a useful assistant."},
-            {"role": "user", "content": prompt}
-        ]
-        # conversation_history.append()
-        # conversation_history = trim_conversation_history(conversation_history)
-        if user_text:
-            processing_message = await update.message.reply_text("Processing voice message, please wait...")
+        prompt = user_text or update.message.text.lower()
+
+        user_history.append({"role": "user", "content": prompt})
+        trim_user_history(user_id)
+
         async def send_typing():
             while True:
                 await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
                 await asyncio.sleep(5)
-                
+
         typing_task = asyncio.create_task(send_typing())
 
         response = await asyncio.to_thread(
             client.chat.completions.create,
             model="google/gemini-2.0-flash-thinking-exp:free",
-            messages=conversation_history,
+            messages=user_history,
             timeout=90
         )
 
@@ -69,9 +80,10 @@ async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None
 
         reply_from_bot = response.choices[0].message.content
         typing_task.cancel()
-        
-        if user_text:
-            await processing_message.delete()
+
+        # Store bot's response in the user's history
+        user_history.append({"role": "assistant", "content": reply_from_bot})
+        trim_user_history(user_id)
 
     except asyncio.TimeoutError:
         reply_from_bot = "The AI is taking too long to respond. Please try again later."
