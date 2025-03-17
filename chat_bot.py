@@ -49,7 +49,7 @@ async def send_long_message(update, text):
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text("Hello! I am your AI chatbot. How can I help you today?")
 
-async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None) -> None:
+async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None, processing_message=None) -> None:
     user_id = update.message.from_user.id
     user_history = get_user_history(user_id)
 
@@ -94,6 +94,9 @@ async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None
         reply_from_bot = "We're experiencing temporary server issues. Please try again in a little while."
         logger.error("Error encountered while chatting with AI: %s", e, exc_info=True)
 
+    if processing_message is not None:
+        await processing_message.delete()
+
     await send_long_message(update, reply_from_bot)
 
 async def voice_chat(update: Update, context: CallbackContext) -> None:
@@ -112,11 +115,8 @@ async def voice_chat(update: Update, context: CallbackContext) -> None:
         # Convert and transcribe
         user_text = await asyncio.to_thread(audio_to_text, user_audio_path, VOSK_MODEL_PATH)
 
-        # Remove processing message
-        await processing_message.delete()
-
         if user_text:
-            await chat_with_gpt(update, context, user_text)
+            await chat_with_gpt(update, context, user_text, processing_message)
         else:
             await update.message.reply_text("Sorry, I couldn't understand the voice message.")
 
