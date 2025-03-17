@@ -34,7 +34,7 @@ def get_user_history(user_id):
                 "content": "You are a helpful AI assistant. Answer only the current question and do not include or reference previous questions and answers in your response. Refer to a past or previous question only if the user explicitly asks about it. Keep responses concise and relevant to the query. If the question is ambiguous, ask for clarification instead of making assumptions. If the question requires factual information, ensure accuracy before responding. Avoid providing opinions or making up information."
             }
         ]    
-        return user_conversations[user_id]
+    return user_conversations[user_id]
 
 def trim_user_history(user_id):
     """Keep only the last MAX_HISTORY messages for a user."""
