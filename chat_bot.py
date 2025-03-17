@@ -16,32 +16,29 @@ logger = logging.getLogger(__name__)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 VOSK_MODEL_PATH = "./vosk_model"
-MAX_HISTORY = 25
+MAX_HISTORY = 50
 
 client = openai.OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
 )
 
-# # Store conversation history
-# conversation_history = [{"role": "system", "content": "You are a useful assistant."}]
-
-# Store conversation history separately for each user
-user_conversations = {}  # Key: user_id, Value: List of messages
+user_conversations = {}
 
 def get_user_history(user_id):
     """Retrieve conversation history for a user, or initialize it."""
     if user_id not in user_conversations:
-        user_conversations[user_id] = [{"role": "system", "content": "You are a helpful AI assistant. Answer only the latest question and do not include previous questions and answers in your response. Refer to a past question only if the user explicitly asks about it."}]
-    return user_conversations[user_id]
+        user_conversations[user_id] = [
+            {
+                "role": "system",
+                "content": "You are a helpful AI assistant. Answer only the current question and do not include or reference previous questions and answers in your response. Refer to a past or previous question only if the user explicitly asks about it. Keep responses concise and relevant to the query. If the question is ambiguous, ask for clarification instead of making assumptions. If the question requires factual information, ensure accuracy before responding. Avoid providing opinions or making up information."
+            }
+        ]    
+        return user_conversations[user_id]
 
 def trim_user_history(user_id):
     """Keep only the last MAX_HISTORY messages for a user."""
     user_conversations[user_id] = [user_conversations[user_id][0]] + user_conversations[user_id][-MAX_HISTORY:]
-
-# def trim_conversation_history(history):
-#     """Keeps only the last MAX_HISTORY messages + system message."""
-#     return [history[0]] + history[-MAX_HISTORY:]
 
 async def send_long_message(update, text):
     max_length = 4000
@@ -70,7 +67,7 @@ async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None
 
         response = await asyncio.to_thread(
             client.chat.completions.create,
-            model="google/gemini-2.0-flash-thinking-exp:free",
+            model="deepseek/deepseek-chat:free",
             messages=user_history,
             timeout=90
         )
