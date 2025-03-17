@@ -75,6 +75,8 @@ async def chat_with_gpt(update: Update, context: CallbackContext, user_text=None
             timeout=90
         )
 
+        logger.info("Full API response: %s", response)  
+        
         if not response or not hasattr(response, "choices") or not response.choices:
             typing_task.cancel()
             raise ValueError("Invalid response from OpenRouter API (empty choices)")
